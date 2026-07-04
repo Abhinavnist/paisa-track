@@ -22,11 +22,13 @@ Built with **Next.js (App Router) + TypeScript**, **PostgreSQL + Prisma**, **Aut
 - Node 20+ and a running PostgreSQL database.
 
 ### 2. Environment
-Values live in `.env` (already created for local dev). Adjust `DATABASE_URL` if needed:
+Values live in `.env` (git-ignored). See `.env.example` for the full list:
 
 ```
-DATABASE_URL="postgresql://<you>@localhost:5432/expense_tracker?schema=public"
-AUTH_SECRET=... (already generated)
+DATABASE_URL="..."   # pooled connection (app runtime)
+DIRECT_URL="..."     # direct connection (migrations)
+AUTH_SECRET="..."    # openssl rand -base64 33
+AUTH_TRUST_HOST=true
 ```
 
 ### 3. Database
@@ -54,6 +56,27 @@ Google is hidden until credentials are set. To enable it:
    AUTH_GOOGLE_SECRET=your-client-secret
    ```
 4. Restart `npm run dev`.
+
+## Deploy to Vercel + Neon
+
+The database is already on **Neon** and migrated. To put the app online:
+
+1. Go to **vercel.com** → **Add New → Project** → import `Abhinavnist/paisa-track`.
+2. Vercel auto-detects Next.js. Before deploying, add these **Environment Variables**:
+   | Name | Value |
+   |------|-------|
+   | `DATABASE_URL` | Neon **pooler** URL (host has `-pooler`) |
+   | `DIRECT_URL` | Neon **direct** URL (host without `-pooler`) |
+   | `AUTH_SECRET` | a fresh `openssl rand -base64 33` value |
+   | `AUTH_TRUST_HOST` | `true` |
+   | `AUTH_GOOGLE_ID` / `AUTH_GOOGLE_SECRET` | only if using Google login |
+3. Click **Deploy**. You'll get a live `https://<app>.vercel.app` URL.
+
+Tables already exist in Neon (migrated). For **future** schema changes, run
+`npm run db:migrate` locally (it targets `DIRECT_URL`) before deploying.
+
+> Google login in production: add redirect URI
+> `https://<app>.vercel.app/api/auth/callback/google` in Google Cloud Console.
 
 ## Useful commands
 - `npx prisma studio` — browse/edit the database in a GUI
