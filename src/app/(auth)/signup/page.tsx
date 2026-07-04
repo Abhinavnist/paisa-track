@@ -6,7 +6,7 @@ import { SignupForm } from "./SignupForm";
 export default function SignupPage() {
   return (
     <Card className="p-6">
-      <h2 className="mb-5 text-lg font-bold text-slate-900">Create your account</h2>
+      <h2 className="mb-5 text-lg font-bold text-slate-900 dark:text-white">Create your account</h2>
       <SignupForm />
       {googleEnabled && (
         <>

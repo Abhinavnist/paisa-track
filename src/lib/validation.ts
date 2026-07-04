@@ -32,7 +32,21 @@ export const categorySchema = z.object({
     .string()
     .regex(/^#[0-9a-fA-F]{6}$/, "Color must be a hex value like #64748b")
     .optional(),
+  monthlyBudget: z.coerce.number().min(0).optional(),
 });
+
+export const recurringSchema = z.object({
+  amount: z.coerce.number().positive("Amount must be greater than 0"),
+  type: z.enum(["INCOME", "EXPENSE"]).default("EXPENSE"),
+  categoryId: z.string().optional().nullable(),
+  note: z.string().trim().max(200).optional().nullable(),
+  frequency: z.enum(["MONTHLY", "WEEKLY"]).default("MONTHLY"),
+  dayOfMonth: z.coerce.number().int().min(1).max(28).optional(),
+  weekday: z.coerce.number().int().min(0).max(6).optional(),
+  active: z.boolean().optional(),
+});
+
+export const updateRecurringSchema = recurringSchema.partial();
 
 export const settingsSchema = z.object({
   name: z.string().trim().min(1).max(60).optional(),

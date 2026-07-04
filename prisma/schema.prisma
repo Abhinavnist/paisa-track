@@ -20,6 +20,12 @@ enum TxType {
 enum TxSource {
   MANUAL
   AUTO_SALARY
+  RECURRING
+}
+
+enum Frequency {
+  MONTHLY
+  WEEKLY
 }
 
 model User {
@@ -39,22 +45,25 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  accounts     Account[]
-  sessions     Session[]
-  categories   Category[]
-  transactions Transaction[]
+  accounts       Account[]
+  sessions       Session[]
+  categories     Category[]
+  transactions   Transaction[]
+  recurringRules RecurringRule[]
 }
 
 model Category {
-  id        String  @id @default(cuid())
-  userId    String
-  name      String
-  icon      String  @default("Tag")
-  color     String  @default("#64748b")
-  isDefault Boolean @default(false)
+  id            String  @id @default(cuid())
+  userId        String
+  name          String
+  icon          String  @default("Tag")
+  color         String  @default("#64748b")
+  isDefault     Boolean @default(false)
+  monthlyBudget Float   @default(0) // 0 = no per-category budget
 
-  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  transactions Transaction[]
+  user           User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  transactions   Transaction[]
+  recurringRules RecurringRule[]
 
   @@unique([userId, name])
   @@index([userId])
@@ -76,6 +85,28 @@ model Transaction {
 
   @@index([userId, date])
   @@index([userId, type])
+}
+
+model RecurringRule {
+  id               String    @id @default(cuid())
+  userId           String
+  amount           Float
+  type             TxType    @default(EXPENSE)
+  categoryId       String?
+  note             String?
+  frequency        Frequency @default(MONTHLY)
+  dayOfMonth       Int       @default(1) // used when frequency = MONTHLY (1-28)
+  weekday          Int       @default(1) // used when frequency = WEEKLY (0=Sun..6=Sat)
+  active           Boolean   @default(true)
+  startDate        DateTime  @default(now())
+  endDate          DateTime?
+  lastPostedPeriod String? // e.g. "2026-07" (monthly) or "2026-W27" (weekly)
+  createdAt        DateTime  @default(now())
+
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  category Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
 }
 
 // ---- Auth.js (NextAuth) adapter models ----

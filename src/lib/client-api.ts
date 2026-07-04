@@ -18,6 +18,17 @@ export type TxInput = {
   note?: string | null;
 };
 
+export type RecurringInput = {
+  amount: number;
+  type: "INCOME" | "EXPENSE";
+  categoryId?: string | null;
+  note?: string | null;
+  frequency: "MONTHLY" | "WEEKLY";
+  dayOfMonth?: number;
+  weekday?: number;
+  active?: boolean;
+};
+
 export const api = {
   createTransaction: (body: TxInput) =>
     req("/api/transactions", { method: "POST", body: JSON.stringify(body) }),
@@ -29,6 +40,14 @@ export const api = {
     req("/api/categories", { method: "POST", body: JSON.stringify(body) }),
   deleteCategory: (id: string) =>
     req(`/api/categories/${id}`, { method: "DELETE" }),
+  updateCategory: (id: string, body: { name?: string; color?: string; monthlyBudget?: number }) =>
+    req(`/api/categories/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
   updateUser: (body: Record<string, unknown>) =>
     req("/api/user", { method: "PATCH", body: JSON.stringify(body) }),
+  createRecurring: (body: RecurringInput) =>
+    req("/api/recurring", { method: "POST", body: JSON.stringify(body) }),
+  updateRecurring: (id: string, body: Partial<RecurringInput>) =>
+    req(`/api/recurring/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
+  deleteRecurring: (id: string) =>
+    req(`/api/recurring/${id}`, { method: "DELETE" }),
 };

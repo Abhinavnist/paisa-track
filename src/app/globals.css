@@ -1,5 +1,8 @@
 @import "tailwindcss";
 
+/* Enable class-based dark mode: `dark:` applies inside a `.dark` element. */
+@custom-variant dark (&:where(.dark, .dark *));
+
 @theme inline {
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
@@ -14,6 +17,11 @@ body {
   color: #0f172a; /* slate-900 */
   background: #f8fafc; /* slate-50 */
   -webkit-tap-highlight-color: transparent;
+}
+
+html.dark body {
+  color: #e2e8f0; /* slate-200 */
+  background: #020617; /* slate-950 */
 }
 
 /* Respect safe areas on notched phones */

@@ -4,7 +4,7 @@ import { monthRange, currentYearMonth, getMonthlySummary } from "@/lib/finance";
 import { formatMoney } from "@/lib/currency";
 import { Card } from "@/components/ui";
 import { MonthSwitcher } from "@/components/MonthSwitcher";
-import { ExpensesList } from "@/components/ExpensesList";
+import { FilteredExpenses } from "@/components/FilteredExpenses";
 import type { TxView } from "@/lib/types";
 
 export default async function ExpensesPage({
@@ -45,7 +45,7 @@ export default async function ExpensesPage({
 
   return (
     <div className="space-y-4">
-      <h1 className="text-xl font-bold text-slate-900">History</h1>
+      <h1 className="text-xl font-bold text-slate-900 dark:text-white">History</h1>
 
       <MonthSwitcher year={year} month={month} />
 
@@ -58,14 +58,14 @@ export default async function ExpensesPage({
         </Card>
         <Card className="p-3">
           <p className="text-xs text-slate-400">Spent</p>
-          <p className="text-lg font-bold text-slate-800">
+          <p className="text-lg font-bold text-slate-800 dark:text-slate-100">
             {formatMoney(summary.expense, summary.currency)}
           </p>
         </Card>
       </div>
 
       <Card>
-        <ExpensesList
+        <FilteredExpenses
           transactions={transactions}
           categories={categories}
           currency={summary.currency}

@@ -66,7 +66,7 @@ export function TransactionForm({
       <FormError>{error}</FormError>
 
       {/* Type toggle */}
-      <div className="grid grid-cols-2 gap-2 rounded-xl bg-slate-100 p-1">
+      <div className="grid grid-cols-2 gap-2 rounded-xl bg-slate-100 p-1 dark:bg-slate-700">
         {(["EXPENSE", "INCOME"] as const).map((t) => (
           <button
             key={t}
@@ -76,9 +76,9 @@ export function TransactionForm({
               "h-9 rounded-lg text-sm font-semibold transition " +
               (type === t
                 ? t === "EXPENSE"
-                  ? "bg-white text-red-600 shadow"
-                  : "bg-white text-emerald-600 shadow"
-                : "text-slate-500")
+                  ? "bg-white text-red-600 shadow dark:bg-slate-900"
+                  : "bg-white text-emerald-600 shadow dark:bg-slate-900"
+                : "text-slate-500 dark:text-slate-300")
             }
           >
             {t === "EXPENSE" ? "Expense" : "Income"}

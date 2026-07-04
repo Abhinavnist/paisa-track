@@ -31,13 +31,13 @@ export function TransactionRow({
       </div>
 
       <div className="min-w-0 flex-1">
-        <p className="truncate text-sm font-semibold text-slate-800">
+        <p className="truncate text-sm font-semibold text-slate-800 dark:text-slate-100">
           {isIncome ? tx.note || "Income" : tx.category?.name ?? "Uncategorized"}
         </p>
         <p className="truncate text-xs text-slate-400">
           {tx.note && !isIncome ? `${tx.note} · ` : ""}
           {format(new Date(tx.date), "d MMM")}
-          {tx.source === "AUTO_SALARY" ? " · Auto" : ""}
+          {tx.source === "AUTO_SALARY" ? " · Auto" : tx.source === "RECURRING" ? " · Recurring" : ""}
         </p>
       </div>
 
@@ -45,7 +45,7 @@ export function TransactionRow({
         <span
           className={
             "shrink-0 text-sm font-bold " +
-            (isIncome ? "text-emerald-600" : "text-slate-800")
+            (isIncome ? "text-emerald-600" : "text-slate-800 dark:text-slate-100")
           }
         >
           {isIncome ? "+" : "−"}

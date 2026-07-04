@@ -6,7 +6,7 @@ import { LoginForm } from "./LoginForm";
 export default function LoginPage() {
   return (
     <Card className="p-6">
-      <h2 className="mb-5 text-lg font-bold text-slate-900">Welcome back</h2>
+      <h2 className="mb-5 text-lg font-bold text-slate-900 dark:text-white">Welcome back</h2>
       <LoginForm />
       {googleEnabled && (
         <>

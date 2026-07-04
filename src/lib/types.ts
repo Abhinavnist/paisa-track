@@ -13,6 +13,6 @@ export type TxView = {
   type: "INCOME" | "EXPENSE";
   date: string; // ISO
   note: string | null;
-  source: "MANUAL" | "AUTO_SALARY";
+  source: "MANUAL" | "AUTO_SALARY" | "RECURRING";
   category: TxCategory;
 };
