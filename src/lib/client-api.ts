@@ -29,6 +29,67 @@ export type RecurringInput = {
   active?: boolean;
 };
 
+export type ParticipantInput = { userId: string; value?: number };
+
+export type SharedExpenseInput = {
+  groupId?: string | null;
+  friendId?: string | null;
+  amount: number;
+  description: string;
+  date?: string;
+  paidById: string;
+  splitType: "EQUAL" | "EXACT" | "PERCENT" | "SHARES";
+  participants: ParticipantInput[];
+};
+
+export type SettlementInput = {
+  groupId?: string | null;
+  friendId?: string | null;
+  fromId: string;
+  toId: string;
+  amount: number;
+  note?: string | null;
+  date?: string;
+};
+
+// Splitwise feature endpoints.
+export const splits = {
+  // Friends & invites
+  inviteFriend: (email: string) =>
+    req("/api/friends/invites", { method: "POST", body: JSON.stringify({ email }) }),
+  respondFriendInvite: (id: string, action: "accept" | "decline") =>
+    req(`/api/friends/invites/${id}`, { method: "PATCH", body: JSON.stringify({ action }) }),
+  cancelFriendInvite: (id: string) =>
+    req(`/api/friends/invites/${id}`, { method: "DELETE" }),
+  unfriend: (id: string, force = false) =>
+    req(`/api/friends/${id}${force ? "?force=1" : ""}`, { method: "DELETE" }),
+
+  // Groups & membership
+  createGroup: (name: string) =>
+    req("/api/groups", { method: "POST", body: JSON.stringify({ name }) }),
+  renameGroup: (id: string, name: string) =>
+    req(`/api/groups/${id}`, { method: "PATCH", body: JSON.stringify({ name }) }),
+  deleteGroup: (id: string) => req(`/api/groups/${id}`, { method: "DELETE" }),
+  inviteMember: (groupId: string, email: string) =>
+    req(`/api/groups/${groupId}/members`, { method: "POST", body: JSON.stringify({ email }) }),
+  removeMember: (groupId: string, memberId: string, force = false) =>
+    req(`/api/groups/${groupId}/members/${memberId}${force ? "?force=1" : ""}`, { method: "DELETE" }),
+  respondGroupInvite: (memberId: string, action: "accept" | "decline") =>
+    req(`/api/groups/invites/${memberId}`, { method: "PATCH", body: JSON.stringify({ action }) }),
+
+  // Shared expenses
+  createExpense: (body: SharedExpenseInput) =>
+    req("/api/expenses", { method: "POST", body: JSON.stringify(body) }),
+  updateExpense: (id: string, body: SharedExpenseInput) =>
+    req(`/api/expenses/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
+  deleteExpense: (id: string) => req(`/api/expenses/${id}`, { method: "DELETE" }),
+
+  // Settlements
+  createSettlement: (body: SettlementInput) =>
+    req("/api/settlements", { method: "POST", body: JSON.stringify(body) }),
+  deleteSettlement: (id: string) => req(`/api/settlements/${id}`, { method: "DELETE" }),
+};
+
 export const api = {
   createTransaction: (body: TxInput) =>
     req("/api/transactions", { method: "POST", body: JSON.stringify(body) }),

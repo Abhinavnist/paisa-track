@@ -9,7 +9,7 @@ generator client {
 datasource db {
   provider  = "postgresql"
   url       = env("DATABASE_URL") // pooled connection (app runtime)
-  directUrl = env("DIRECT_URL")   // direct connection (migrations)
+  directUrl = env("DIRECT_URL") // direct connection (migrations)
 }
 
 enum TxType {
@@ -28,6 +28,24 @@ enum Frequency {
   WEEKLY
 }
 
+enum InviteStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+}
+
+enum MemberStatus {
+  ACTIVE
+  REMOVED
+}
+
+enum SplitType {
+  EQUAL
+  EXACT
+  PERCENT
+  SHARES
+}
+
 model User {
   id            String    @id @default(cuid())
   name          String?
@@ -37,9 +55,9 @@ model User {
   emailVerified DateTime?
 
   // App settings
-  currency      String   @default("INR")
-  monthlySalary Float    @default(0)
-  monthlyBudget Float    @default(0)
+  currency        String @default("INR")
+  monthlySalary   Float  @default(0)
+  monthlyBudget   Float  @default(0)
   salaryCreditDay Int    @default(1) // day of month salary is credited
 
   createdAt DateTime @default(now())
@@ -50,6 +68,19 @@ model User {
   categories     Category[]
   transactions   Transaction[]
   recurringRules RecurringRule[]
+
+  // Splitwise feature (all named relations — multiple FKs to User per model)
+  friendshipsA      Friendship[]    @relation("FriendshipA")
+  friendshipsB      Friendship[]    @relation("FriendshipB")
+  sentFriendInvites FriendInvite[]  @relation("SentFriendInvites")
+  recvFriendInvites FriendInvite[]  @relation("ReceivedFriendInvites")
+  createdGroups     Group[]         @relation("CreatedGroups")
+  groupMemberships  GroupMember[]   @relation("GroupMemberships")
+  paidExpenses      SharedExpense[] @relation("PaidExpenses")
+  createdExpenses   SharedExpense[] @relation("CreatedExpenses")
+  expenseShares     ExpenseShare[]  @relation("ExpenseShares")
+  settlementsFrom   Settlement[]    @relation("SettlementsFrom")
+  settlementsTo     Settlement[]    @relation("SettlementsTo")
 }
 
 model Category {
@@ -107,6 +138,132 @@ model RecurringRule {
   category Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
 
   @@index([userId])
+}
+
+// ---- Splitwise feature models ----
+// Shared expenses are fully separate from the personal ledger (Transaction);
+// nothing here ever writes a Transaction row.
+
+// One row per pair of friends. Always stored with userAId < userBId (lexical)
+// so the relationship is symmetric and deduped regardless of who invited whom.
+model Friendship {
+  id        String   @id @default(cuid())
+  userAId   String
+  userBId   String
+  createdAt DateTime @default(now())
+
+  userA User @relation("FriendshipA", fields: [userAId], references: [id], onDelete: Cascade)
+  userB User @relation("FriendshipB", fields: [userBId], references: [id], onDelete: Cascade)
+
+  @@unique([userAId, userBId])
+  @@index([userAId])
+  @@index([userBId])
+}
+
+// Friend request by email. inviteeId is back-filled on signup if the invitee
+// did not yet have an account (see reconcileInvites).
+model FriendInvite {
+  id           String       @id @default(cuid())
+  inviterId    String
+  inviteeEmail String // lowercased
+  inviteeId    String?
+  status       InviteStatus @default(PENDING)
+  createdAt    DateTime     @default(now())
+  respondedAt  DateTime?
+
+  inviter User  @relation("SentFriendInvites", fields: [inviterId], references: [id], onDelete: Cascade)
+  invitee User? @relation("ReceivedFriendInvites", fields: [inviteeId], references: [id], onDelete: Cascade)
+
+  @@unique([inviterId, inviteeEmail])
+  @@index([inviteeEmail])
+  @@index([inviteeId, status])
+}
+
+model Group {
+  id          String   @id @default(cuid())
+  name        String
+  createdById String
+  createdAt   DateTime @default(now())
+
+  createdBy   User            @relation("CreatedGroups", fields: [createdById], references: [id], onDelete: Cascade)
+  members     GroupMember[]
+  expenses    SharedExpense[]
+  settlements Settlement[]
+
+  @@index([createdById])
+}
+
+model GroupMember {
+  id       String       @id @default(cuid())
+  groupId  String
+  userId   String? // null while an emailed invite is still pending
+  email    String // lowercased invite email
+  status   MemberStatus @default(ACTIVE)
+  invite   InviteStatus @default(PENDING)
+  isAdmin  Boolean      @default(false)
+  joinedAt DateTime     @default(now())
+
+  group Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  user  User? @relation("GroupMemberships", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([groupId, email])
+  @@index([groupId, status])
+  @@index([userId, status])
+}
+
+model SharedExpense {
+  id          String    @id @default(cuid())
+  groupId     String? // set for group expenses; null for 1-on-1 friend expenses
+  paidById    String
+  amount      Float // total, in major units
+  description String
+  splitType   SplitType @default(EQUAL)
+  date        DateTime  @default(now())
+  createdById String
+  createdAt   DateTime  @default(now())
+  deletedAt   DateTime? // soft delete so balances stay reconstructable
+
+  group     Group?         @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  paidBy    User           @relation("PaidExpenses", fields: [paidById], references: [id], onDelete: Cascade)
+  createdBy User           @relation("CreatedExpenses", fields: [createdById], references: [id], onDelete: Cascade)
+  shares    ExpenseShare[]
+
+  @@index([groupId, date])
+  @@index([paidById])
+}
+
+model ExpenseShare {
+  id         String @id @default(cuid())
+  expenseId  String
+  userId     String // participant who owes this portion
+  owedAmount Float // computed share (sum of shares == expense.amount)
+  shareValue Float? // raw exact/percent/weight as entered, for editing/re-derivation
+
+  expense SharedExpense @relation(fields: [expenseId], references: [id], onDelete: Cascade)
+  user    User          @relation("ExpenseShares", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([expenseId, userId])
+  @@index([userId])
+}
+
+model Settlement {
+  id          String   @id @default(cuid())
+  groupId     String? // set for in-group settlements; null for 1-on-1
+  fromId      String // payer of the settlement (reduces what they owe)
+  toId        String // receiver
+  amount      Float
+  note        String?
+  date        DateTime @default(now())
+  createdById String
+  createdAt   DateTime @default(now())
+
+  group Group? @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  from  User   @relation("SettlementsFrom", fields: [fromId], references: [id], onDelete: Cascade)
+  to    User   @relation("SettlementsTo", fields: [toId], references: [id], onDelete: Cascade)
+
+  @@index([groupId])
+  @@index([fromId])
+  @@index([toId])
 }
 
 // ---- Auth.js (NextAuth) adapter models ----

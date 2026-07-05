@@ -6,6 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { authConfig } from "@/auth.config";
 import { loginSchema } from "@/lib/validation";
 import { seedCategoriesForUser } from "@/lib/categories";
+import { reconcileInvites } from "@/lib/social";
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   ...authConfig,
@@ -53,6 +54,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     // Seed default categories for adapter-created users (e.g. Google sign-in).
     async createUser({ user }) {
       if (user.id) await seedCategoriesForUser(prisma, user.id);
+      // Link any invites addressed to this email before the account existed.
+      if (user.id && user.email) await reconcileInvites(user.id, user.email);
     },
   },
 });

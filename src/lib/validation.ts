@@ -56,5 +56,75 @@ export const settingsSchema = z.object({
   salaryCreditDay: z.coerce.number().int().min(1).max(28).optional(),
 });
 
+// ---- Splitwise feature ----
+
+export const inviteEmailSchema = z.object({
+  email: z.string().trim().toLowerCase().email("Enter a valid email"),
+});
+
+export const groupSchema = z.object({
+  name: z.string().trim().min(1, "Group name is required").max(60),
+});
+
+const participantSchema = z.object({
+  userId: z.string().min(1),
+  value: z.coerce.number().optional(), // exact amount, percent, or share weight
+});
+
+export const sharedExpenseSchema = z
+  .object({
+    groupId: z.string().optional().nullable(),
+    friendId: z.string().optional().nullable(),
+    amount: z.coerce.number().positive("Amount must be greater than 0"),
+    description: z.string().trim().min(1, "Description is required").max(120),
+    date: z.coerce.date().optional(),
+    paidById: z.string().min(1),
+    splitType: z.enum(["EQUAL", "EXACT", "PERCENT", "SHARES"]).default("EQUAL"),
+    participants: z.array(participantSchema).min(1, "Add at least one participant"),
+  })
+  .refine((d) => !!d.groupId !== !!d.friendId, {
+    message: "Provide either a group or a friend, not both",
+    path: ["groupId"],
+  })
+  .refine(
+    (d) =>
+      d.splitType !== "EXACT" ||
+      Math.round(d.participants.reduce((s, p) => s + (p.value ?? 0), 0) * 100) ===
+        Math.round(d.amount * 100),
+    { message: "Exact amounts must add up to the total", path: ["participants"] },
+  )
+  .refine(
+    (d) =>
+      d.splitType !== "PERCENT" ||
+      Math.abs(d.participants.reduce((s, p) => s + (p.value ?? 0), 0) - 100) < 0.01,
+    { message: "Percentages must add up to 100", path: ["participants"] },
+  )
+  .refine(
+    (d) => d.splitType !== "SHARES" || d.participants.every((p) => (p.value ?? 0) > 0),
+    { message: "Every share must be greater than 0", path: ["participants"] },
+  )
+  .refine((d) => new Set(d.participants.map((p) => p.userId)).size === d.participants.length, {
+    message: "Duplicate participant",
+    path: ["participants"],
+  });
+
+export const settlementSchema = z
+  .object({
+    groupId: z.string().optional().nullable(),
+    friendId: z.string().optional().nullable(),
+    fromId: z.string().min(1),
+    toId: z.string().min(1),
+    amount: z.coerce.number().positive("Amount must be greater than 0"),
+    note: z.string().trim().max(120).optional().nullable(),
+    date: z.coerce.date().optional(),
+  })
+  .refine((d) => !!d.groupId !== !!d.friendId, {
+    message: "Provide either a group or a friend",
+    path: ["groupId"],
+  })
+  .refine((d) => d.fromId !== d.toId, { message: "Cannot settle with yourself", path: ["toId"] });
+
 export type SignupInput = z.infer<typeof signupSchema>;
 export type TransactionInput = z.infer<typeof transactionSchema>;
+export type SharedExpenseInput = z.infer<typeof sharedExpenseSchema>;
+export type SettlementInput = z.infer<typeof settlementSchema>;
