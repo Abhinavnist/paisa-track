@@ -6,6 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { signIn, signOut } from "@/auth";
 import { signupSchema, loginSchema } from "@/lib/validation";
 import { seedCategoriesForUser } from "@/lib/categories";
+import { reconcileInvites } from "@/lib/social";
 
 export type ActionState = { error?: string } | undefined;
 
@@ -37,6 +38,8 @@ export async function registerUser(
     data: { name, email, passwordHash, currency },
   });
   await seedCategoriesForUser(prisma, user.id);
+  // Link any invites sent to this email before the account existed.
+  await reconcileInvites(user.id, user.email);
 
   // Throws a redirect on success (do not wrap in try/catch).
   await signIn("credentials", { email, password, redirectTo: "/dashboard" });
