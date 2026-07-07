@@ -46,6 +46,17 @@ enum SplitType {
   SHARES
 }
 
+enum NoteRole {
+  VIEWER
+  EDITOR
+}
+
+enum NoteInviteStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+}
+
 model User {
   id            String    @id @default(cuid())
   name          String?
@@ -81,6 +92,12 @@ model User {
   expenseShares     ExpenseShare[]  @relation("ExpenseShares")
   settlementsFrom   Settlement[]    @relation("SettlementsFrom")
   settlementsTo     Settlement[]    @relation("SettlementsTo")
+
+  // Notes feature
+  notes             Note[]             @relation("NoteOwner")
+  noteFolders       NoteFolder[]
+  noteTagLabels     NoteTagLabel[]
+  noteCollaborations NoteCollaborator[]
 }
 
 model Category {
@@ -264,6 +281,93 @@ model Settlement {
   @@index([groupId])
   @@index([fromId])
   @@index([toId])
+}
+
+// ---- Notes feature models ----
+// Rich-text notes (TipTap JSON) with folders, tags, trash, and three sharing
+// modes: public read-only link, email-invite collaborators, and friend shares.
+// Fully separate from the personal ledger and Splitwise models.
+
+model Note {
+  id          String    @id @default(cuid())
+  ownerId     String
+  title       String    @default("")
+  content     Json      @default("{}") // TipTap document JSON
+  plainText   String    @default("") @db.Text // extracted text for search + list excerpt
+  folderId    String?
+  isPinned    Boolean   @default(false)
+  isArchived  Boolean   @default(false)
+  deletedAt   DateTime? // trash (soft delete)
+  isPublic    Boolean   @default(false) // public-link toggle (revoke without losing token)
+  publicToken String?   @unique // opaque token; rotate = regenerate
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  owner         User               @relation("NoteOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  folder        NoteFolder?        @relation(fields: [folderId], references: [id], onDelete: SetNull)
+  tags          NoteTag[]
+  collaborators NoteCollaborator[]
+
+  @@index([ownerId, deletedAt, isArchived])
+  @@index([folderId])
+}
+
+model NoteFolder {
+  id        String   @id @default(cuid())
+  ownerId   String
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  owner User   @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  notes Note[]
+
+  @@unique([ownerId, name])
+}
+
+model NoteTagLabel {
+  id      String  @id @default(cuid())
+  ownerId String
+  name    String
+  color   String?
+
+  owner User      @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  notes NoteTag[]
+
+  @@unique([ownerId, name])
+}
+
+// Join table: Note <-> NoteTagLabel
+model NoteTag {
+  noteId String
+  tagId  String
+
+  note Note         @relation(fields: [noteId], references: [id], onDelete: Cascade)
+  tag  NoteTagLabel @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([noteId, tagId])
+  @@index([tagId])
+}
+
+// A share of a note with another person. email is always set (lowercased);
+// userId is back-filled on signup by reconcileInvites when the invitee was
+// emailed before having an account. Friend shares are created ACCEPTED.
+model NoteCollaborator {
+  id          String           @id @default(cuid())
+  noteId      String
+  email       String // lowercased target
+  userId      String?
+  role        NoteRole         @default(VIEWER)
+  status      NoteInviteStatus @default(PENDING)
+  createdAt   DateTime         @default(now())
+  respondedAt DateTime?
+
+  note Note  @relation(fields: [noteId], references: [id], onDelete: Cascade)
+  user User? @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([noteId, email])
+  @@index([userId, status])
+  @@index([email, status])
 }
 
 // ---- Auth.js (NextAuth) adapter models ----

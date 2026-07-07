@@ -90,6 +90,109 @@ export const splits = {
   deleteSettlement: (id: string) => req(`/api/settlements/${id}`, { method: "DELETE" }),
 };
 
+export type NoteContent = Record<string, unknown>;
+
+export type NoteUpdateInput = {
+  title?: string;
+  content?: NoteContent;
+  folderId?: string | null;
+  isPinned?: boolean;
+  isArchived?: boolean;
+  tagIds?: string[];
+};
+
+// Notes feature endpoints.
+export const notesApi = {
+  list: (params: Record<string, string> = {}) => {
+    const qs = new URLSearchParams(params).toString();
+    return req<{ notes: NoteListItem[] }>(`/api/notes${qs ? `?${qs}` : ""}`);
+  },
+  get: (id: string) => req<{ note: NoteDetail; role: string; isOwner: boolean }>(`/api/notes/${id}`),
+  create: (body: { title?: string; content?: NoteContent; folderId?: string | null } = {}) =>
+    req<{ note: { id: string } }>("/api/notes", { method: "POST", body: JSON.stringify(body) }),
+  update: (id: string, body: NoteUpdateInput) =>
+    req(`/api/notes/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
+  remove: (id: string) => req(`/api/notes/${id}`, { method: "DELETE" }),
+  restore: (id: string) => req(`/api/notes/${id}/restore`, { method: "POST" }),
+
+  // Folders
+  listFolders: () => req<{ folders: NoteFolderItem[] }>("/api/notes/folders"),
+  createFolder: (name: string) =>
+    req("/api/notes/folders", { method: "POST", body: JSON.stringify({ name }) }),
+  renameFolder: (id: string, name: string) =>
+    req(`/api/notes/folders/${id}`, { method: "PATCH", body: JSON.stringify({ name }) }),
+  deleteFolder: (id: string) => req(`/api/notes/folders/${id}`, { method: "DELETE" }),
+
+  // Tags
+  listTags: () => req<{ tags: NoteTagItem[] }>("/api/notes/tags"),
+  createTag: (name: string, color?: string) =>
+    req("/api/notes/tags", { method: "POST", body: JSON.stringify({ name, color }) }),
+  deleteTag: (id: string) => req(`/api/notes/tags/${id}`, { method: "DELETE" }),
+
+  // Sharing — collaborators
+  addCollaborator: (noteId: string, body: { email?: string; friendId?: string; role: "VIEWER" | "EDITOR" }) =>
+    req(`/api/notes/${noteId}/collaborators`, { method: "POST", body: JSON.stringify(body) }),
+  updateCollaborator: (noteId: string, cid: string, role: "VIEWER" | "EDITOR") =>
+    req(`/api/notes/${noteId}/collaborators/${cid}`, { method: "PATCH", body: JSON.stringify({ role }) }),
+  removeCollaborator: (noteId: string, cid: string) =>
+    req(`/api/notes/${noteId}/collaborators/${cid}`, { method: "DELETE" }),
+
+  // Sharing — public link
+  enablePublic: (noteId: string) =>
+    req<{ note: PublicState }>(`/api/notes/${noteId}/share/public`, { method: "POST" }),
+  disablePublic: (noteId: string) =>
+    req<{ note: PublicState }>(`/api/notes/${noteId}/share/public`, { method: "DELETE" }),
+  rotatePublic: (noteId: string) =>
+    req<{ note: PublicState }>(`/api/notes/${noteId}/share/public/rotate`, { method: "POST" }),
+
+  // Invites
+  listInvites: () => req<{ invites: NoteInvite[] }>("/api/notes/invites"),
+  respondInvite: (id: string, action: "accept" | "decline") =>
+    req(`/api/notes/invites/${id}`, { method: "PATCH", body: JSON.stringify({ action }) }),
+};
+
+export type NoteTagItem = { id: string; name: string; color: string | null };
+export type NoteFolderItem = { id: string; name: string; count: number };
+export type NoteListItem = {
+  id: string;
+  title: string;
+  excerpt: string;
+  isPinned: boolean;
+  isArchived: boolean;
+  isPublic: boolean;
+  updatedAt: string;
+  folder: { id: string; name: string } | null;
+  tags: NoteTagItem[];
+  isShared: boolean;
+  isOwner: boolean;
+};
+export type NoteCollaboratorItem = {
+  id: string;
+  email: string;
+  role: "VIEWER" | "EDITOR";
+  status: "PENDING" | "ACCEPTED" | "DECLINED";
+  userId: string | null;
+};
+export type NoteDetail = {
+  id: string;
+  title: string;
+  content: NoteContent;
+  folderId: string | null;
+  isPinned: boolean;
+  isArchived: boolean;
+  isPublic: boolean;
+  publicToken: string | null;
+  updatedAt: string;
+  tags: NoteTagItem[];
+  collaborators: NoteCollaboratorItem[];
+};
+export type PublicState = { id: string; isPublic: boolean; publicToken: string | null };
+export type NoteInvite = {
+  id: string;
+  role: "VIEWER" | "EDITOR";
+  note: { id: string; title: string; owner: { name: string | null; email: string } };
+};
+
 export const api = {
   createTransaction: (body: TxInput) =>
     req("/api/transactions", { method: "POST", body: JSON.stringify(body) }),

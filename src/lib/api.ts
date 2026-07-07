@@ -2,7 +2,8 @@ import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { orderedPair } from "@/lib/splits";
-import type { GroupMember } from "@/generated/prisma";
+import { roleSatisfies } from "@/lib/notes";
+import type { GroupMember, Note, NoteRole } from "@/generated/prisma";
 
 // Returns the signed-in userId, or a 401 JSON response to short-circuit the handler.
 export async function requireApiUser(): Promise<
@@ -67,4 +68,29 @@ export async function requireGroupAdmin(
   if ("response" in result) return result;
   if (!result.member.isAdmin) return { response: forbidden("Admins only") };
   return result;
+}
+
+// Resolves a caller's access to a note. Returns the note plus the caller's
+// effective role ("OWNER" | NoteRole), or a 404 response when the note is
+// missing/trashed or the caller lacks at least `minRole` — 404 (not 403) so we
+// never leak the existence of notes the user can't see. Owner outranks EDITOR
+// which outranks VIEWER.
+export async function requireNoteAccess(
+  noteId: string,
+  userId: string,
+  minRole: NoteRole = "VIEWER",
+): Promise<{ note: Note; role: "OWNER" | NoteRole } | { response: NextResponse }> {
+  const note = await prisma.note.findFirst({ where: { id: noteId, deletedAt: null } });
+  if (!note) return { response: notFound("Note not found") };
+
+  if (note.ownerId === userId) return { note, role: "OWNER" };
+
+  const collab = await prisma.noteCollaborator.findFirst({
+    where: { noteId, userId, status: "ACCEPTED" },
+    select: { role: true },
+  });
+  if (!collab || !roleSatisfies(collab.role, minRole)) {
+    return { response: notFound("Note not found") };
+  }
+  return { note, role: collab.role };
 }
