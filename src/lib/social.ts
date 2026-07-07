@@ -22,5 +22,11 @@ export async function reconcileInvites(
       where: { email: lower, userId: null },
       data: { userId },
     }),
+    // Notes shared to this email before the person signed up now resolve to
+    // their account, so the note appears under "Shared with me".
+    db.noteCollaborator.updateMany({
+      where: { email: lower, userId: null },
+      data: { userId },
+    }),
   ]);
 }

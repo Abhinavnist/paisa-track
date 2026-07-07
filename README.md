@@ -1,13 +1,15 @@
-# PaisaTrack — Expense Tracker (V1)
+# PaisaTrack — Expense Tracker + Splits + Notes
 
 A dead-simple, mobile-first web app that shows salaried people exactly where their money
 goes each month. Log expenses in seconds, see a clear breakdown by category, set your
-salary + budget, and have your salary auto-credited each month.
+salary + budget, split shared bills with friends, and keep rich notes — all in one place.
 
-Built with **Next.js (App Router) + TypeScript**, **PostgreSQL + Prisma**, **Auth.js**
-(email/password + Google), **Tailwind CSS**, and **Recharts**.
+Built with **Next.js 16 (App Router) + TypeScript**, **PostgreSQL + Prisma**, **Auth.js**
+(email/password + Google), **Tailwind CSS v4**, **Recharts**, and **TipTap** (rich-text editor).
 
 ## Features
+
+### 💸 Core expense tracking
 - Email/password **and** Google sign-in; pick your currency at signup
 - Add / edit / delete expenses & income (amount, category, date, note)
 - Monthly summary: balance, income, spend, budget progress with over-budget warning
@@ -15,6 +17,32 @@ Built with **Next.js (App Router) + TypeScript**, **PostgreSQL + Prisma**, **Aut
 - Full history with month navigation
 - Monthly salary **auto-credited** (lazy: added the first time you open the app each month)
 - Installable PWA (works great added to a phone home screen)
+
+### 📊 V2 additions
+- **Recurring transactions** — rent, EMIs, subscriptions post themselves on a monthly/weekly schedule
+- **Per-category budgets** with spending-limit tracking
+- **Insights** — spending trends and comparisons over time
+- **Search** across your transaction history
+- **CSV export** of your data
+- **Dark mode** (class-based, follows your system preference)
+
+### 👥 Splitwise-style expense splitting
+- **Friends** by email invite (invites auto-link when the person signs up)
+- **Groups** for trips/flatmates with admin roles and member management
+- Split a bill **equally, by exact amounts, by percentage, or by shares** — always rounds to the exact total
+- Live **who-owes-whom** balances, per friend and per group
+- **Settle up** to zero out balances
+- Fully isolated from your personal ledger — a shared dinner never touches your own expense totals
+
+### 📝 Notes (new)
+- **Rich-text editor** (TipTap): headings, bold/italic, lists, **checklists**, quotes, code blocks, links
+- Organize with **folders** and colored **tags**; **pin**, **archive**, and **trash** (with restore)
+- Full-text **search** across titles and content
+- **Three ways to share**, private by default:
+  - **Public read-only link** — anyone with the link can view, no login; revoke or reset the link anytime
+  - **Invite by email** — as viewer or editor; the invite links to their account on signup
+  - **Share with a friend** — pick from your existing friends, viewer or editor
+- Shared notes appear under **"Shared with me"**; editors can edit, viewers are read-only
 
 ## Getting started
 
@@ -110,12 +138,13 @@ Yes — most of them fit this architecture. Here's an honest status + plan:
 
 | Feature (like Fast Budget)        | Feasible? | Where it lands |
 |-----------------------------------|-----------|----------------|
-| Overview screen, charts, reports  | ✅ Done (basic) | Already built; can add more report types |
+| Overview screen, charts, reports  | ✅ Done | Dashboard + Insights |
 | Custom categories & subcategories | ✅ Categories done | Subcategories = small schema add |
-| Budgets + spending-limit alerts   | 🟡 Budget done | Add per-category limits + alerts (V1.1) |
-| Recurring / scheduled transactions| ✅ Easy | Same mechanism as auto-salary (V1.1) |
-| Transaction templates             | ✅ Easy | Save-and-reuse a transaction (V1.1) |
-| CSV import / export               | ✅ Easy | Parse/generate CSV on the web app (V1.1) |
+| Budgets + spending-limit alerts   | ✅ Done | Per-category budgets shipped; proactive alerts next |
+| Recurring / scheduled transactions| ✅ Done | Monthly/weekly recurring rules |
+| CSV import / export               | 🟡 Export done | Import = parse CSV (next) |
+| Split expenses with friends       | ✅ Done | Splitwise-style friends/groups/settlements |
+| Notes & shared lists              | ✅ Done | Rich-text notes with public/email/friend sharing |
 | Multiple accounts + credit cards  | 🟡 Medium | Add an `Account` model, tag transactions |
 | Free / Premium / Ultra plans      | 🟡 Medium | Add billing (Stripe/Razorpay) + plan gating |
 | **Automatic bank sync**           | 🔴 Big     | Needs a licensed aggregator — see below |
@@ -152,11 +181,12 @@ Android APK with SMS/notification auto-capture (the real "automatic" experience 
 users), and only later evaluate full bank-aggregator sync.
 
 ## Roadmap
-**V1.1 (web, quick wins):** recurring transactions, per-category budget alerts, transaction
-templates, CSV import/export, more charts.
+**✅ Shipped:** core tracking, recurring transactions, per-category budgets, insights, search,
+CSV export, dark mode, PWA, **Splitwise-style splitting** (friends, groups, settlements), and
+**Notes** (rich text, folders/tags, public/email/friend sharing).
 
 **V2 (Android APK):** wrap this same app with **Capacitor**; add **automatic SMS/notification
 expense capture**, offline cache, app icon/splash, push reminders.
 
 **V3 (advanced):** multiple accounts + credit cards, subscription plans (Stripe/Razorpay),
-optional bank-aggregator sync, shared/family budgets.
+optional bank-aggregator sync, shared/family budgets, note reminders + activity feed.

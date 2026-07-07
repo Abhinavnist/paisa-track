@@ -124,6 +124,60 @@ export const settlementSchema = z
   })
   .refine((d) => d.fromId !== d.toId, { message: "Cannot settle with yourself", path: ["toId"] });
 
+// ---- Notes feature ----
+
+// TipTap document JSON is stored verbatim; we only require it to be an object.
+const tiptapContent = z.record(z.string(), z.unknown());
+
+export const createNoteSchema = z.object({
+  title: z.string().trim().max(200).optional(),
+  content: tiptapContent.optional(),
+  folderId: z.string().optional().nullable(),
+});
+
+export const updateNoteSchema = z.object({
+  title: z.string().trim().max(200).optional(),
+  content: tiptapContent.optional(),
+  folderId: z.string().optional().nullable(),
+  isPinned: z.boolean().optional(),
+  isArchived: z.boolean().optional(),
+  tagIds: z.array(z.string()).optional(),
+});
+
+export const noteFolderSchema = z.object({
+  name: z.string().trim().min(1, "Folder name is required").max(60),
+});
+
+export const noteTagSchema = z.object({
+  name: z.string().trim().min(1, "Tag name is required").max(40),
+  color: z
+    .string()
+    .regex(/^#[0-9a-fA-F]{6}$/, "Color must be a hex value like #64748b")
+    .optional()
+    .nullable(),
+});
+
+export const noteRoleSchema = z.enum(["VIEWER", "EDITOR"]);
+
+// Add a collaborator by email OR by an existing friend's userId (exactly one).
+export const addCollaboratorSchema = z
+  .object({
+    email: z.string().trim().toLowerCase().email("Enter a valid email").optional(),
+    friendId: z.string().optional(),
+    role: noteRoleSchema.default("VIEWER"),
+  })
+  .refine((d) => !!d.email !== !!d.friendId, {
+    message: "Provide either an email or a friend",
+    path: ["email"],
+  });
+
+export const updateCollaboratorSchema = z.object({ role: noteRoleSchema });
+
+export const respondInviteSchema = z.object({ action: z.enum(["accept", "decline"]) });
+
+export type CreateNoteInput = z.infer<typeof createNoteSchema>;
+export type UpdateNoteInput = z.infer<typeof updateNoteSchema>;
+
 export type SignupInput = z.infer<typeof signupSchema>;
 export type TransactionInput = z.infer<typeof transactionSchema>;
 export type SharedExpenseInput = z.infer<typeof sharedExpenseSchema>;

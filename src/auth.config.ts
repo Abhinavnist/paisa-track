@@ -4,7 +4,8 @@ import Google from "next-auth/providers/google";
 // Edge-safe auth config shared by middleware and the full Node config.
 // Contains ONLY things that work in the edge runtime (no Prisma, no bcrypt).
 
-const PROTECTED_PREFIXES = ["/dashboard", "/expenses", "/settings"];
+// Note: "/share/[token]" is intentionally NOT protected — public read-only note links.
+const PROTECTED_PREFIXES = ["/dashboard", "/expenses", "/settings", "/notes"];
 
 // Only enable Google when credentials are provided (keeps dev working without OAuth setup).
 const googleEnabled = Boolean(
